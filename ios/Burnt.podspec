@@ -16,6 +16,7 @@ Pod::Spec.new do |s|
   s.static_framework = true
   s.dependency 'SPIndicator', '~> 1.6'
   s.dependency 'SPAlert', '~> 4.2'
+  s.dependency 'ToastViewSwift', '~> 2.1'
 
   s.dependency 'ExpoModulesCore'
 

@@ -1,6 +1,7 @@
 import ExpoModulesCore
 import SPIndicator
 import SPAlert
+import ToastViewSwift
 
 
 enum AlertPreset: String, Enumerable {
@@ -165,6 +166,18 @@ enum ToastHaptic: String, Enumerable {
         return .none
     }
   }
+  func toFeedbackType() -> UINotificationFeedbackGenerator.FeedbackType? {
+    switch self {
+      case .success:
+        return .success
+      case .error:
+        return .error
+      case .warning:
+        return .warning
+      case .none:
+        return nil
+    }
+  }
 }
 enum BurntError: Error {
   case invalidSystemName
@@ -211,27 +224,38 @@ public class BurntModule: Module {
     Name("Burnt")
     
     AsyncFunction("toastAsync") { (options: ToastOptions) -> Void in
-      var preset: SPIndicatorIconPreset?
+      let preset: SPIndicatorIconPreset?
       do {
         preset = try options.preset.toSPIndicatorPreset(options)
       } catch {
-        log.error("Burnt Toast error: \(error)")
+        log.error("Burnt Toast erorr: \(error)")
+        preset = nil
       }
-      let view = (preset != nil) ? SPIndicatorView(title: options.title, message: options.message, preset: preset ?? .done):  SPIndicatorView(title: options.title, message: options.message)
-      
-      if let duration = options.duration {
-        view.duration = duration
+        
+      let config = ToastConfiguration(
+        // TODO: Dismissable config
+        dismissBy: [.time(time: options.duration ?? 0.5), .swipe(direction: .natural)]
+        // TODO: "from" config
+      )
+      let viewConfig = ToastViewConfiguration(
+        subtitleNumberOfLines: 4
+      )
+        
+      let view: Toast?
+      if preset != nil {
+        // TODO: Preset should have some image
+        view = Toast.text(options.title, subtitle: options.message, viewConfig: viewConfig, config: config)
+      } else {
+        view = Toast.text(options.title, subtitle: options.message, viewConfig: viewConfig, config: config)
       }
-      
-      if let icon = options.layout?.iconSize {
-        view.layout.iconSize = .init(width: icon.width, height: icon.height)
+        
+      guard let view = view else { return }
+      if let haptic = options.haptic.toFeedbackType() {
+        view.show(haptic: haptic)
+      } else {
+        view.show()
       }
-      
-      view.dismissByDrag = options.shouldDismissByDrag
-      
-      view.presentSide = options.from.toSPIndicatorPresentSide();
-      
-      view.present(haptic: options.haptic.toSPIndicatorHaptic())
+        
     }.runOnQueue(.main)
     
     AsyncFunction("alertAsync")  { (options: AlertOptions) -> Void in
